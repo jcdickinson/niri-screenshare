@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   aur:
@@ -10,14 +11,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify tag and package metadata match
+      - name: Verify package metadata
         shell: bash
         run: |
-          version="${GITHUB_REF_NAME#v}"
           pkgver="$(sed -n 's/^pkgver=//p' contrib/PKGBUILD)"
           srcinfo_ver="$(sed -n 's/^[[:space:]]*pkgver = //p' contrib/.SRCINFO | head -n1)"
-          test "$version" = "$pkgver"
-          test "$version" = "$srcinfo_ver"
+          test "$pkgver" = "$srcinfo_ver"
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            version="${GITHUB_REF_NAME#v}"
+            test "$version" = "$pkgver"
+          fi
           if grep -q "sha256sums=('SKIP')" contrib/PKGBUILD || grep -q '^[[:space:]]*sha256sums = SKIP$' contrib/.SRCINFO; then
             echo '::error::AUR source checksum must not be SKIP'
             exit 1
@@ -35,8 +38,6 @@ jobs:
           raw="${raw#\"}"
           raw="${raw%\"}"
 
-          # Accept normal multiline keys, CRLF keys, and secrets pasted with
-          # literal \n escapes. If that is not a key, try base64-encoded input.
           printf '%b' "$raw" | tr -d '\r' > "$key"
           chmod 600 "$key"
           if ! ssh-keygen -y -f "$key" >/dev/null 2>&1; then
@@ -65,5 +66,6 @@ jobs:
             echo 'AUR already has this package metadata'
             exit 0
           fi
-          git commit -m "Update to ${GITHUB_REF_NAME#v}"
+          pkgver="$(sed -n 's/^pkgver=//p' PKGBUILD)"
+          git commit -m "Update to ${pkgver}"
           git push origin HEAD:master
