@@ -25,4 +25,8 @@ jobs:
           CACHIX_CACHE: ${{ vars.CACHIX_CACHE }}
           CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
         shell: bash
-        run: nix build --no-link --print-out-paths .#default .#native-picker | cachix push "$CACHIX_CACHE"
+        run: |
+          if [ -z "$CACHIX_SIGNING_KEY" ]; then
+            unset CACHIX_SIGNING_KEY
+          fi
+          nix build --no-link --print-out-paths .#default .#native-picker | cachix push "$CACHIX_CACHE"
