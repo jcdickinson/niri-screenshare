@@ -1,3 +1,4 @@
+{ packages }:
 {
   config,
   lib,
@@ -20,9 +21,15 @@ in
       default = "native";
       apply =
         value:
-        if builtins.isString value then pkgs.callPackage ./package.nix { withPicker = value; } else value;
+        if builtins.isString value then
+          if value == "native" then
+            packages.${pkgs.stdenv.hostPlatform.system}.native-picker
+          else
+            packages.${pkgs.stdenv.hostPlatform.system}.default
+        else
+          value;
       description = ''
-        Picker implementation to build, or a custom niri-screenshare package.
+        Picker implementation from the flake packages, or a custom niri-screenshare package.
       '';
     };
 

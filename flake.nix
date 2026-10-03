@@ -23,7 +23,9 @@
     {
       formatter = eachSystem (system: pkgsFor.${system}.nixfmt);
 
-      homeModules.default = import ./nix/home-module.nix;
+      homeModules.default = import ./nix/home-module.nix {
+        inherit (self) packages;
+      };
       homeModules.niri-screenshare = self.homeModules.default;
       homeManagerModules = self.homeModules;
 
