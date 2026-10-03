@@ -1,0 +1,28 @@
+name: Cachix
+on: [push, workflow_dispatch]
+
+jobs:
+  publish:
+    if: vars.CACHIX_CACHE != ''
+    runs-on: ubuntu-latest
+    env:
+      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.CACHIX_AUTH_TOKEN != ''
+      - uses: cachix/install-nix-action@v31
+        if: env.CACHIX_AUTH_TOKEN != ''
+      - uses: cachix/cachix-action@v17
+        if: env.CACHIX_AUTH_TOKEN != ''
+        with:
+          name: ${{ vars.CACHIX_CACHE }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
+          skipPush: true
+      - name: Build and upload GTK and native picker packages
+        if: env.CACHIX_AUTH_TOKEN != ''
+        env:
+          CACHIX_CACHE: ${{ vars.CACHIX_CACHE }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+        shell: bash
+        run: nix build --no-link --print-out-paths .#default .#native-picker | cachix push "$CACHIX_CACHE"

@@ -9,6 +9,7 @@ jobs:
         flags:
           - ""
           - "--no-default-features"
+          - "--no-default-features --features native-picker"
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -19,3 +20,11 @@ jobs:
       - run: cargo build --release ${{ matrix.flags }}
       - run: cargo test --release ${{ matrix.flags }}
       - run: cargo clippy --all-targets ${{ matrix.flags }} -- -D warnings
+      - name: Reject conflicting picker features
+        if: matrix.flags == '--no-default-features --features native-picker'
+        run: |
+          if cargo check --features native-picker > conflict.log 2>&1; then
+            cat conflict.log
+            exit 1
+          fi
+          grep -F 'picker and native-picker are mutually exclusive' conflict.log

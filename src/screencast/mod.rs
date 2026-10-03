@@ -1,7 +1,7 @@
-#[cfg(feature = "picker")]
+#[cfg(any(feature = "picker", feature = "native-picker"))]
 mod pick;
 
-#[cfg(feature = "picker")]
+#[cfg(any(feature = "picker", feature = "native-picker"))]
 pub use pick::{run_picker_process, PickerChoice as DebugPickerChoice};
 
 use std::collections::HashMap;
@@ -28,7 +28,7 @@ enum CaptureState {
 pub struct ScreenCastInterface {
     state: Arc<Mutex<HashMap<String, CaptureSession>>>,
     conn: Option<Connection>,
-    #[cfg(feature = "picker")]
+    #[cfg(any(feature = "picker", feature = "native-picker"))]
     picker: Arc<PickerCoordinator>,
 }
 
@@ -47,18 +47,18 @@ struct SessionHandler {
     state: Arc<Mutex<HashMap<String, CaptureSession>>>,
     session_id: String,
     conn: Option<Connection>,
-    #[cfg(feature = "picker")]
+    #[cfg(any(feature = "picker", feature = "native-picker"))]
     picker: Arc<PickerCoordinator>,
 }
 
 /// Tracks picker child processes by portal session so unrelated capture requests
 /// cannot reuse, replace, or cancel one another's consent UI.
-#[cfg(feature = "picker")]
+#[cfg(any(feature = "picker", feature = "native-picker"))]
 struct PickerCoordinator {
     children: std::sync::Mutex<HashMap<String, pick::PickerChildSlot>>,
 }
 
-#[cfg(feature = "picker")]
+#[cfg(any(feature = "picker", feature = "native-picker"))]
 impl PickerCoordinator {
     fn new() -> Self {
         Self {
@@ -107,7 +107,7 @@ impl ScreenCastInterface {
         Self {
             state: Arc::new(Mutex::new(HashMap::new())),
             conn: Some(conn),
-            #[cfg(feature = "picker")]
+            #[cfg(any(feature = "picker", feature = "native-picker"))]
             picker: Arc::new(PickerCoordinator::new()),
         }
     }
@@ -117,7 +117,7 @@ impl ScreenCastInterface {
 impl SessionHandler {
     async fn close(&mut self) -> fdo::Result<()> {
         tracing::info!("Session.Close: session={}", self.session_id);
-        #[cfg(feature = "picker")]
+        #[cfg(any(feature = "picker", feature = "native-picker"))]
         self.picker.cancel(&self.session_id);
 
         let session = self.state.lock().await.remove(&self.session_id);
@@ -200,7 +200,7 @@ impl ScreenCastInterface {
                             state: self.state.clone(),
                             session_id: sh.clone(),
                             conn: self.conn.clone(),
-                            #[cfg(feature = "picker")]
+                            #[cfg(any(feature = "picker", feature = "native-picker"))]
                             picker: self.picker.clone(),
                         },
                     )
@@ -245,7 +245,7 @@ impl ScreenCastInterface {
             session.window_id = None;
         }
 
-        #[cfg(feature = "picker")]
+        #[cfg(any(feature = "picker", feature = "native-picker"))]
         if std::env::var("NIRI_SCREENSHARE_NO_PICKER").is_err() {
             let outputs = if requested_types & 1 != 0 {
                 match niri_ipc::list_outputs() {
@@ -490,7 +490,7 @@ fn select_sources_results() -> HashMap<String, OwnedValue> {
     results
 }
 
-#[cfg(feature = "picker")]
+#[cfg(any(feature = "picker", feature = "native-picker"))]
 fn apply_picker_choice(session: &mut CaptureSession, choice: pick::PickerChoice) {
     match choice {
         pick::PickerChoice::Monitor(name) => {

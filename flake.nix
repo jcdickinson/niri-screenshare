@@ -23,6 +23,10 @@
     {
       formatter = eachSystem (system: pkgsFor.${system}.nixfmt);
 
+      homeModules.default = import ./nix/home-module.nix;
+      homeModules.niri-screenshare = self.homeModules.default;
+      homeManagerModules = self.homeModules;
+
       overlays.default = final: _prev: {
         niri-screenshare = final.callPackage ./nix/package.nix { };
       };
@@ -30,6 +34,9 @@
       packages = eachSystem (system: {
         default = pkgsFor.${system}.niri-screenshare;
         niri-screenshare = pkgsFor.${system}.niri-screenshare;
+        native-picker = pkgsFor.${system}.niri-screenshare.override {
+          withPicker = "native";
+        };
       });
 
       devShells = eachSystem (system: {

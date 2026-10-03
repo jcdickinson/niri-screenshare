@@ -23,6 +23,19 @@ paru -S niri-screenshare
 The default picker build requires the `gtk4` and `libadwaita` system packages.
 Build without the picker via `cargo build --release --no-default-features`.
 
+Build the native Wayland/Niri picker without GTK or libadwaita:
+
+```sh
+cargo build --release --no-default-features --features native-picker
+# Or with Nix:
+nix build .#native-picker
+```
+
+The `picker` and `native-picker` features are mutually exclusive. Enabling both
+produces a compile-time error. Neither feature is required for a pickerless build.
+The Nix package's `withPicker` option accepts `true` or `"gtk"` for GTK,
+`"native"` for the native picker, and `false` for no picker.
+
 ```sh
 git clone https://github.com/pantarune/niri-screenshare
 cd niri-screenshare
@@ -39,6 +52,52 @@ No manual config is normally needed. On first service start the backend adds onl
 `org.freedesktop.impl.portal.ScreenCast=niri` to the user's portal preferences;
 it does not replace the default backend for unrelated portal interfaces.
 
+## Home Manager
+
+Import the flake module and enable it:
+
+```nix
+{
+  imports = [ inputs.niri-screenshare.homeModules.default ];
+
+  services.niri-screenshare = {
+    enable = true;
+    package = "native"; # Default; use "gtk" for the GTK picker.
+    settings.native_picker.style.hover_background = "#3a5068";
+  };
+}
+```
+
+The module installs the package and its portal/D-Bus metadata, manages the user
+service, and selects `niri` for Niri's ScreenCast portal. Remove any existing
+explicit `xdg.portal.config.niri."org.freedesktop.impl.portal.ScreenCast"`
+assignment to another backend, such as `"gnome"`, to avoid conflicting definitions.
+Other portal backends and preferences can remain in your Home Manager config.
+
+`package` also accepts a derivation, including a package override:
+
+```nix
+services.niri-screenshare.package =
+  inputs.niri-screenshare.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
+    withPicker = "native";
+  };
+```
+
+Nonempty `settings` are written as TOML to `$XDG_CONFIG_HOME/niri-screenshare/config.toml`.
+The module is also exported as `homeModules.niri-screenshare` and
+`homeManagerModules.default`.
+
+## Cachix
+
+The separate `Cachix` workflow builds and uploads the GTK and native Nix packages
+on pushes or manual runs. Set the repository variable `CACHIX_CACHE` to your cache
+name and the Actions secret `CACHIX_AUTH_TOKEN` to a write token. If either is
+unset, the workflow skips its work. Self-signed caches can also provide the
+optional `CACHIX_SIGNING_KEY` secret.
+
+Uploads are limited to the two package outputs and their runtime dependencies;
+build dependencies and intermediate build outputs are not uploaded automatically.
+
 ## behavior
 
 **picker mode (default)** — a GTK4 dialog with Displays / Windows tabs appears
@@ -53,7 +112,59 @@ does **not** claim to implement niri's synthetic Dynamic Cast Target.
 | build | behavior |
 |-------|----------|
 | `default` | GTK4 picker dialog for requested displays/windows |
+| `--no-default-features --features native-picker` | Wayland monitor icons and Niri click-to-select windows |
 | `--no-default-features` | pickerless focused-output capture |
+
+**Native picker:** a monitor icon appears near the top of each available monitor.
+Click it to share that monitor. When window sharing is also allowed, the adjacent
+window icon starts Niri's native window picker; click the window to share.
+Window-only requests open Niri's picker directly. The X button cancels the popup.
+Escape cancels either picker;
+right-click also cancels the monitor overlay. Overlays close before capture starts.
+The overlay uses layer-shell and shared-memory drawing, with no widget toolkit.
+
+If the requesting app cancels while Niri's window picker is active, capture is
+cancelled but the crosshair can remain until you press Escape. Niri currently
+has no IPC request to cancel `PickWindow`, and disconnecting its socket does
+not cancel the compositor's input grab.
+
+### native picker theme
+
+Buttons show hover and pressed states. A click activates only if it is released
+on the same button where it started; releasing outside cancels that click.
+
+The native picker merges `niri-screenshare/config.toml` files in this order:
+
+1. Built-in defaults.
+2. Directories in `$XDG_CONFIG_DIRS` (default `/etc/xdg`), from last to first.
+3. `$XDG_CONFIG_HOME` (default `$HOME/.config`).
+
+Earlier entries in `$XDG_CONFIG_DIRS` have higher priority, and the user config
+has the highest priority. Empty environment variables use their defaults;
+relative XDG paths are ignored. Each file overrides only the values it specifies,
+using `serde-toml-merge`. Missing files are normal. Unreadable or invalid files
+emit a warning and are skipped, retaining the last valid configuration.
+Config is read each time the picker opens.
+
+Example `~/.config/niri-screenshare/config.toml` (all values shown are defaults):
+
+```toml
+[native_picker.style]
+background = "#243344"
+hover_background = "#3a5068"
+pressed_background = "#172433"
+foreground = "#eeeeee"
+hover_foreground = "#ffffff"
+pressed_foreground = "#eeeeee"
+separator = "#667788"
+cancel_background = "#663344"
+cancel_hover_background = "#884455"
+cancel_pressed_background = "#442233"
+```
+
+Colors use `#RRGGBB`. These settings style the native Wayland popup; Niri draws
+its own window-selection crosshair. Theme loading and TOML dependencies are
+only compiled with `native-picker`.
 
 ### env vars
 
@@ -109,7 +220,9 @@ stops the corresponding compositor screencast session.
 - **runtime:** `xdg-desktop-portal`, `pipewire`, `niri`, `gtk4`, `libadwaita`
 - **build:** `cargo`, `gtk4`, `libadwaita`
 
-GTK4/libadwaita are not needed by a `--no-default-features` build.
+GTK4/libadwaita are only required by the `picker` feature. The `native-picker`
+feature uses Rust Wayland protocol bindings and requires Niri's `PickWindow` IPC,
+layer-shell, and Wayland output names (`wl_output` version 4).
 
 ## troubleshooting
 

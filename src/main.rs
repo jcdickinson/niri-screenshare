@@ -1,3 +1,9 @@
+#[cfg(all(feature = "picker", feature = "native-picker"))]
+compile_error!("picker and native-picker are mutually exclusive; use --no-default-features --features native-picker");
+
+#[cfg(feature = "native-picker")]
+mod config;
+
 mod niri_ipc;
 mod portal_config;
 mod screencast;
@@ -12,7 +18,7 @@ fn main() -> anyhow::Result<()> {
     match args.next().as_deref() {
         Some("check") | Some("--check") => cmd_check(),
         Some("--picker") | Some("--debug-picker") => {
-            #[cfg(feature = "picker")]
+            #[cfg(any(feature = "picker", feature = "native-picker"))]
             {
                 match screencast::run_picker_process() {
                     Some(screencast::DebugPickerChoice::Monitor(name)) => {
@@ -27,9 +33,9 @@ fn main() -> anyhow::Result<()> {
                 }
                 Ok(())
             }
-            #[cfg(not(feature = "picker"))]
+            #[cfg(not(any(feature = "picker", feature = "native-picker")))]
             {
-                anyhow::bail!("--picker requires building with --features picker");
+                anyhow::bail!("--picker requires building with picker or native-picker");
             }
         }
         Some(arg) => {

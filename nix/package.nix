@@ -8,6 +8,15 @@
   withPicker ? true,
 }:
 
+assert lib.assertMsg (builtins.elem withPicker [
+  true
+  false
+  "gtk"
+  "native"
+]) "withPicker must be true, false, \"gtk\", or \"native\"";
+let
+  gtkPicker = withPicker == true || withPicker == "gtk";
+in
 rustPlatform.buildRustPackage {
   pname = "niri-screenshare";
   version = "0.2.2";
@@ -24,14 +33,16 @@ rustPlatform.buildRustPackage {
 
   cargoLock.lockFile = ../Cargo.lock;
 
-  buildFeatures = lib.optional withPicker "picker";
+  buildNoDefaultFeatures = true;
+  buildFeatures =
+    lib.optional gtkPicker "picker" ++ lib.optional (withPicker == "native") "native-picker";
 
-  nativeBuildInputs = lib.optionals withPicker [
+  nativeBuildInputs = lib.optionals gtkPicker [
     pkg-config
     wrapGAppsHook4
   ];
 
-  buildInputs = lib.optionals withPicker [
+  buildInputs = lib.optionals gtkPicker [
     gtk4
     libadwaita
   ];

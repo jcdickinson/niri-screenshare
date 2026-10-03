@@ -12,6 +12,7 @@ categories = ["multimedia::video", "os::linux-apis"]
 [features]
 default = ["picker"]
 picker = ["dep:gtk4", "dep:libadwaita"]
+native-picker = ["dep:wayland-client", "dep:wayland-protocols-wlr", "dep:tempfile", "dep:toml", "dep:serde-toml-merge"]
 
 [dependencies]
 zbus = { version = "5", features = ["tokio"] }
@@ -24,6 +25,11 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 gtk4 = { version = "0.9", optional = true }
 libadwaita = { version = "0.7", optional = true }
+wayland-client = { version = "0.31", optional = true }
+wayland-protocols-wlr = { version = "0.3", features = ["client"], optional = true }
+tempfile = { version = "3", optional = true }
+toml = { version = "0.9", optional = true }
+serde-toml-merge = { version = "0.3", optional = true }
 
 [profile.release]
 opt-level = "z"

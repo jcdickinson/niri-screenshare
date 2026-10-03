@@ -32,7 +32,7 @@ fn niri_command() -> Command {
     cmd
 }
 
-fn find_niri_socket() -> Option<String> {
+pub fn find_niri_socket() -> Option<String> {
     let dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
     let entries = std::fs::read_dir(&dir).ok()?;
     let mut candidates = Vec::new();
