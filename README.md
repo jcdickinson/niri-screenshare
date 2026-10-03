@@ -89,6 +89,23 @@ The module is also exported as `homeModules.niri-screenshare` and
 
 ## Cachix
 
+Use the public binary cache to download prebuilt packages:
+
+```sh
+cachix use jcdickinson-niri-screenshare
+```
+
+Or configure Nix directly:
+
+```nix
+nix.settings = {
+  extra-substituters = [ "https://jcdickinson-niri-screenshare.cachix.org" ];
+  extra-trusted-public-keys = [
+    "jcdickinson-niri-screenshare.cachix.org-1:6a3GUuvwF77lKjdqBxShB34qomCUIsMe9PFq6P8H5S8="
+  ];
+};
+```
+
 The separate `Cachix` workflow builds and uploads the GTK and native Nix packages
 on pushes or manual runs. Set the repository variable `CACHIX_CACHE` to your cache
 name and the Actions secret `CACHIX_AUTH_TOKEN` to a write token. If either is
