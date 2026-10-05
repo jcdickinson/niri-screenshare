@@ -5,6 +5,7 @@ compile_error!("picker and native-picker are mutually exclusive; use --no-defaul
 mod config;
 
 mod niri_ipc;
+#[cfg(feature = "auto-portal-config")]
 mod portal_config;
 mod screencast;
 
@@ -85,24 +86,27 @@ fn cmd_check() -> anyhow::Result<()> {
         }
     }
 
-    print!("portals.conf ... ");
-    let config_home = std::env::var_os("XDG_CONFIG_HOME")
-        .filter(|value| !value.is_empty())
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| {
-            let home = std::env::var_os("HOME").unwrap_or_else(|| "/root".into());
-            std::path::PathBuf::from(home).join(".config")
-        });
-    let conf_path = config_home.join("xdg-desktop-portal").join("portals.conf");
-    if conf_path.exists() {
-        let content = std::fs::read_to_string(&conf_path).unwrap_or_default();
-        if content.contains("org.freedesktop.impl.portal.ScreenCast=niri") {
-            println!("OK");
+    #[cfg(feature = "auto-portal-config")]
+    {
+        print!("portals.conf ... ");
+        let config_home = std::env::var_os("XDG_CONFIG_HOME")
+            .filter(|value| !value.is_empty())
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| {
+                let home = std::env::var_os("HOME").unwrap_or_else(|| "/root".into());
+                std::path::PathBuf::from(home).join(".config")
+            });
+        let conf_path = config_home.join("xdg-desktop-portal").join("portals.conf");
+        if conf_path.exists() {
+            let content = std::fs::read_to_string(&conf_path).unwrap_or_default();
+            if content.contains("org.freedesktop.impl.portal.ScreenCast=niri") {
+                println!("OK");
+            } else {
+                println!("WARN: exists but missing ScreenCast=niri");
+            }
         } else {
-            println!("WARN: exists but missing ScreenCast=niri");
+            println!("WARN: not found (auto-created on service start)");
         }
-    } else {
-        println!("WARN: not found (auto-created on service start)");
     }
 
     println!();
@@ -113,6 +117,7 @@ fn cmd_check() -> anyhow::Result<()> {
 async fn run_portal() -> anyhow::Result<()> {
     tracing::info!("starting niri-screenshare");
     tracing::debug!("stale sessions from previous instance will be dropped");
+    #[cfg(feature = "auto-portal-config")]
     portal_config::ensure_portals_config();
 
     let conn = zbus::connection::Builder::session()?.build().await?;

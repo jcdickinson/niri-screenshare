@@ -6,6 +6,7 @@
   gtk4,
   libadwaita,
   withPicker ? true,
+  autoPortalConfig ? false,
 }:
 
 assert lib.assertMsg (builtins.elem withPicker [
@@ -35,7 +36,9 @@ rustPlatform.buildRustPackage {
 
   buildNoDefaultFeatures = true;
   buildFeatures =
-    lib.optional gtkPicker "picker" ++ lib.optional (withPicker == "native") "native-picker";
+    lib.optional gtkPicker "picker"
+    ++ lib.optional (withPicker == "native") "native-picker"
+    ++ lib.optional autoPortalConfig "auto-portal-config";
 
   nativeBuildInputs = lib.optionals gtkPicker [
     pkg-config

@@ -48,9 +48,17 @@ systemctl --user daemon-reload
 systemctl --user enable --now niri-screenshare.service
 ```
 
-No manual config is normally needed. On first service start the backend adds only
+Default Cargo builds enable the `auto-portal-config` feature. On service start the backend adds
 `org.freedesktop.impl.portal.ScreenCast=niri` to the user's portal preferences;
-it does not replace the default backend for unrelated portal interfaces.
+it preserves preferences for unrelated portal interfaces.
+
+Disable automatic configuration with `--no-default-features`, adding `--features picker`
+or `--features native-picker` as needed. To enable it with a native picker build,
+use `--no-default-features --features native-picker,auto-portal-config`.
+
+Flake packages disable automatic configuration by default. Home Manager selects
+the backend declaratively. The Nix package's `autoPortalConfig` override can
+enable automatic configuration for other uses.
 
 ## Home Manager
 
@@ -212,9 +220,14 @@ niri-screenshare check
 
 The portal daemon reads `$XDG_CONFIG_HOME/xdg-desktop-portal/portals.conf`
 (or `~/.config/xdg-desktop-portal/portals.conf` when `XDG_CONFIG_HOME` is unset)
-to decide which backend to use. niri-screenshare adds its ScreenCast preference
-without changing unrelated defaults. Override it by editing that file before
-starting the service.
+to decide which backend to use. Builds with `auto-portal-config` add the
+ScreenCast preference on service start. Builds without that feature leave portal
+configuration to Home Manager or the user. For manual configuration, add this
+entry to the `[preferred]` section of `niri-portals.conf` in the same directory:
+
+```ini
+org.freedesktop.impl.portal.ScreenCast=niri
+```
 
 ## how it works
 

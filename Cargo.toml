@@ -10,7 +10,8 @@ keywords = ["niri", "portal", "screencast", "pipewire", "wayland"]
 categories = ["multimedia::video", "os::linux-apis"]
 
 [features]
-default = ["picker"]
+default = ["picker", "auto-portal-config"]
+auto-portal-config = []
 picker = ["dep:gtk4", "dep:libadwaita"]
 native-picker = ["dep:wayland-client", "dep:wayland-protocols-wlr", "dep:tempfile", "dep:toml", "dep:serde-toml-merge"]
 
